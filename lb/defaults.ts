@@ -7,6 +7,8 @@ export default {
             Accept: 'application/json, text/plain, */*'
         }
     },
+    timeout: 0,
+    adapter: 'xhr',
     validateStatus(status) {
         return status >= 200 && status < 300;
     }
