@@ -1,11 +1,38 @@
-import {Axios as IAxios, AxiosRequestConfig, Method} from "../types";
+import {
+    Axios as IAxios,
+    AxiosPromise,
+    AxiosRequestConfig,
+    AxiosResponse,
+    Method,
+    RejectedFn,
+    ResolvedFn
+} from "../types";
 import dispatchRequest, {transformURL} from "./dispatchRequest";
 import mergeConfig from "./mergeConfig";
+import InterceptorManager from "./InterceptorManager";
+
+interface Interceptors {
+    request: InterceptorManager<AxiosRequestConfig>;
+    response: InterceptorManager<AxiosResponse>;
+}
+
+interface PromiseChainNode<T> {
+    resolved: ResolvedFn<T> | ((config: AxiosRequestConfig) => AxiosPromise);
+    rejected?: RejectedFn;
+}
+
+type PromiseChain<T> = PromiseChainNode<T>[];
 
 export default class Axios implements IAxios {
     defaults: AxiosRequestConfig;
+    interceptors: Interceptors;
     constructor(config: AxiosRequestConfig) {
         this.defaults = config;
+        this.interceptors = {
+            request: new InterceptorManager<AxiosRequestConfig>(),
+            response: new InterceptorManager<AxiosResponse>()
+        }
+
         this._eachMethodNoData();
         this._eachMethodWithData();
     }
@@ -20,10 +47,29 @@ export default class Axios implements IAxios {
 
         config = mergeConfig(this.defaults, config);
 
-        return dispatchRequest(config);
+
+        const chain: PromiseChain<any> = [
+            {
+                resolved: dispatchRequest,
+                rejected: void 0
+            }
+        ]
+
+        this.interceptors.request.forEach(interceptor => chain.unshift(interceptor));
+        this.interceptors.response.forEach(interceptor => chain.push(interceptor));
+
+        let promise = Promise.resolve(config) as AxiosPromise<AxiosRequestConfig>;
+
+        while(chain.length) {
+            const {resolved, rejected} = chain.shift()!;
+
+            promise = promise.then(resolved, resolved);
+        }
+
+        return promise;
     }
 
-    getUri(config: AxiosRequestConfig): string {
+    getUri(config?: AxiosRequestConfig): string {
         return transformURL(mergeConfig(this.defaults, config));
     }
 
