@@ -4,6 +4,10 @@ import { extend } from "./helpers";
 import defaults from './defaults';
 import mergeConfig from "./core/mergeConfig";
 
+import CancelToken from "@/cancel/CancelToken.ts";
+import CancelError from "@/cancel/CancelError.ts";
+import isCancel from "@/cancel/isCancel.ts";
+
 // 工厂模式
 function createInstance(config: AxiosRequestConfig): AxiosInstance {
     const context = new Axios(config);
@@ -29,6 +33,10 @@ axios.spread = function spread(callback) {
         return callback.apply(null, arr);
     }
 }
+
+axios.CancelToken = CancelToken;
+axios.CancelError = CancelError;
+axios.isCancel = isCancel;
 
 axios.Axios = Axios;
 

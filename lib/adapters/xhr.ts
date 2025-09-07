@@ -1,16 +1,31 @@
-import {AxiosPromise, AxiosRequestConfig, AxiosResponse} from "../types";
+import {AxiosPromise, AxiosRequestConfig, AxiosResponse, Cancel, CancelExecutor} from "../types";
 import {createError, ErrorCodes} from "../core/AxiosError";
 import settle from "../core/settle";
+import CancelError from "@/cancel/CancelError.ts";
 
 const isXhrAdapterSupported = typeof XMLHttpRequest !== 'undefined';
 
 export default isXhrAdapterSupported && function xhr(config: AxiosRequestConfig): AxiosPromise {
     return new Promise((resolve, reject) => {
-        const { url, method, data, headers = {}, timeout, responseType, cancelToken } = config;
+        const { url, method, data, headers = {}, timeout, responseType, cancelToken , signal } = config;
 
         const request = new XMLHttpRequest();
 
-        request.open(method.toUpperCase(), url!, true);
+        const onCancel = (reason?: Cancel) => {
+            reject(reason ?? new CancelError('canceled', config, request));
+            request.abort();
+        }
+
+        const done = () => {
+            if(cancelToken) {
+                cancelToken.unsubscribe(onCancel);
+            }
+            if(signal) {
+                signal.removeEventListener?.('abort', onCancel);
+            }
+        }
+
+        request.open((method as string).toUpperCase(), url!, true);
 
         request.onreadystatechange = function () {
             if(request.readyState !== 4) return;
@@ -25,7 +40,13 @@ export default isXhrAdapterSupported && function xhr(config: AxiosRequestConfig)
                 request
             }
 
-            settle(resolve, reject, response);
+            settle((val) => {
+                done();
+                resolve(val);
+            }, (err) => {
+                reject(err);
+                done();
+            }, response);
         }
 
         request.onerror = function () {
@@ -44,11 +65,11 @@ export default isXhrAdapterSupported && function xhr(config: AxiosRequestConfig)
             request.timeout = timeout;
         }
 
-        if(cancelToken) {
-            cancelToken.promise.then(reason => {
-                request.abort();
-                reject(reason);
-            })
+        if(cancelToken || signal) {
+            cancelToken && cancelToken.subscribe(onCancel);
+            if(signal) {
+                config.signal?.aborted ? onCancel() : signal?.addEventListener?.('abort', onCancel)
+            }
         }
 
         request.send(data as any);
