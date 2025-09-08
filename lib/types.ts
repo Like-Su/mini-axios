@@ -11,13 +11,16 @@ export interface AxiosRequestConfig {
     url?: string;
     data?: unknown;
     params?: Params;
-    headers?: IHeaders | null;
+    headers?: IHeaders | void | null;
     baseURL?: string;
     responseType?: XMLHttpRequestResponseType;
     timeout?: number;
 
     // 自定义适配器
     adapter?: 'http' | 'xhr' | 'fetch' | ((config: AxiosRequestConfig) => AxiosPromise);
+
+    transformRequest?: AxiosTransformer | AxiosTransformer[];
+    transformResponse?: AxiosTransformer | AxiosTransformer[];
 
     // 取消请求
     cancelToken?: CancelToken;
@@ -30,6 +33,11 @@ export interface AxiosRequestConfig {
     paramsSerializer?: (params: Params) => string;
 }
 
+export interface AxiosTransformer {
+    (this: AxiosRequestConfig, data: any, headers: IHeaders, status?: number): any;
+}
+
+// https://developer.mozilla.org/en-US/docs/Web/API/AbortController
 export interface GenericAboutSignal {
     readonly aborted: boolean;
     onabort?: ((...args: any) => any) | null;

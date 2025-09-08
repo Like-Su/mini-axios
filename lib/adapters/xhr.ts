@@ -2,14 +2,16 @@ import {AxiosPromise, AxiosRequestConfig, AxiosResponse, Cancel, CancelExecutor}
 import {createError, ErrorCodes} from "../core/AxiosError";
 import settle from "../core/settle";
 import CancelError from "@/cancel/CancelError.ts";
+import {parseHeaders} from "@/helpers/headers.ts";
 
 const isXhrAdapterSupported = typeof XMLHttpRequest !== 'undefined';
 
 export default isXhrAdapterSupported && function xhr(config: AxiosRequestConfig): AxiosPromise {
     return new Promise((resolve, reject) => {
-        const { url, method, data, headers = {}, timeout, responseType, cancelToken , signal } = config;
+        const { url, method, data, timeout, responseType, cancelToken , signal } = config;
 
         const request = new XMLHttpRequest();
+
 
         const onCancel = (reason?: Cancel) => {
             reject(reason ?? new CancelError('canceled', config, request));
@@ -31,11 +33,13 @@ export default isXhrAdapterSupported && function xhr(config: AxiosRequestConfig)
             if(request.readyState !== 4) return;
             if(request.status === 0) return;
 
+            const responseHeaders = request.getAllResponseHeaders();
+
             const response: AxiosResponse = {
                 data: request.response,
                 status: request.status,
                 statusText: request.statusText,
-                headers,
+                headers: parseHeaders(responseHeaders),
                 config,
                 request
             }
