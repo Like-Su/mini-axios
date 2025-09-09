@@ -18,6 +18,10 @@ export const isNil = (thing: unknown): boolean => thing == null;
 
 export const isDate = (thing: unknown): thing is Date => objToString.call(thing) === '[object Date]';
 
+export function isFromData(thing: unknown): thing is FormData {
+    return typeof thing !== 'undefined' && thing instanceof FormData;
+}
+
 export function isPlainObject(thing: unknown): boolean {
     if(kindOf(thing) !== 'object') {
         return false;

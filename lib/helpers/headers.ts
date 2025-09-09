@@ -2,6 +2,7 @@ import {IHeaders, Method} from "../types";
 import {deepMerge} from "./index";
 import {isPlainObject} from "@/helpers/is.ts";
 
+// https://github.com/axios/axios/blob/28e5e3016d6ed0b3ec489427e4ec00133f45ddc2/lib/helpers/parseHeaders.js#L7
 const ignoreDuplicateOf = new Set([
     'age', 'authorization', 'content-length', 'content-type', 'etag',
     'expires', 'from', 'host', 'if-modified-since', 'if-unmodified-since',

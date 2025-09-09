@@ -11,6 +11,8 @@ export default {
     },
     timeout: 0,
     adapter: 'xhr',
+    xsrfCookieName: 'XSRF-TOKEN',
+    xsrfHeaderName: 'X-XSRF-TOKEN',
     // 请求数据转换
     transformRequest: [
         function (data, headers ) {

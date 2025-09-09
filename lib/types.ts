@@ -26,11 +26,28 @@ export interface AxiosRequestConfig {
     cancelToken?: CancelToken;
     signal?: GenericAboutSignal;
 
+    // 跨域请求
+    withCredentials?: boolean;
+
+    // xsrf 处理
+    xsrfCookieName?: string;
+    xsrfHeaderName?: string;
+
+    auth: AxiosBasicCredentials;
+
+
     // 根据状态码判断请求是否成功
     validateStatus?: (status: number) => boolean;
 
     // 自定义参数序列化函数
     paramsSerializer?: (params: Params) => string;
+
+    // 下载进度
+    onDownloadProProgress?: (progressEvent: ProgressEvent) => void;
+    // 上传进度
+    onUploadProgress?: (progressEvent: ProgressEvent) => void;
+
+    [b: string]: any;
 }
 
 export interface AxiosTransformer {
@@ -172,4 +189,9 @@ export interface Cancel {
 
 export interface CancelStatic {
     new (message: string, config: AxiosRequestConfig, request: XMLHttpRequest): Cancel;
+}
+
+export interface AxiosBasicCredentials {
+    username: string;
+    password: string;
 }

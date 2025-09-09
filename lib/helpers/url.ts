@@ -1,6 +1,8 @@
 import {Params} from "../types";
 import * as string_decoder from "string_decoder";
 import {isArray, isNil, isPlainObject, isURLSearchParams, isDate} from "./is";
+import * as diagnostics_channel from "diagnostics_channel";
+import {windows} from "rimraf";
 
 function encode(val: string): string {
     return encodeURIComponent(val)
@@ -67,4 +69,27 @@ export function buildURL(url: string, params?: Params, paramsSerializer?: (param
     }
 
     return url;
+}
+
+
+const urlParsingNode = document.createElement('a');
+const currentOrigin = resolveURL(window.location.href);
+
+// 同源判断
+export function isURLSameOrigin(requestURL: string) {
+    const parsedOrigin = resolveURL(requestURL);
+    return parsedOrigin.protocol === currentOrigin.protocol && parsedOrigin.host === currentOrigin.host;
+}
+
+function resolveURL(url: string) {
+    urlParsingNode.setAttribute('href', url);
+    const {
+        protocol,
+        host
+    } = urlParsingNode;
+
+    return {
+        protocol,
+        host
+    }
 }

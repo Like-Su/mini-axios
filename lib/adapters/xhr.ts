@@ -3,12 +3,30 @@ import {createError, ErrorCodes} from "../core/AxiosError";
 import settle from "../core/settle";
 import CancelError from "@/cancel/CancelError.ts";
 import {parseHeaders} from "@/helpers/headers.ts";
+import {isFromData, isNil} from "@/helpers/is.ts";
+import {isURLSameOrigin} from "@/helpers/url.ts";
+import { cookie } from '@/helpers/cookie.ts';
 
 const isXhrAdapterSupported = typeof XMLHttpRequest !== 'undefined';
 
 export default isXhrAdapterSupported && function xhr(config: AxiosRequestConfig): AxiosPromise {
     return new Promise((resolve, reject) => {
-        const { url, method, data, timeout, responseType, cancelToken , signal } = config;
+        const {
+            url,
+            method,
+            data,
+            timeout,
+            headers,
+            auth,
+            responseType,
+            cancelToken ,
+            withCredentials,
+            signal,
+            xsrfCookieName,
+            xsrfHeaderName,
+            onDownloadProProgress,
+            onUploadProgress
+        } = config;
 
         const request = new XMLHttpRequest();
 
@@ -61,6 +79,14 @@ export default isXhrAdapterSupported && function xhr(config: AxiosRequestConfig)
             reject(createError('Timeout Error', config, ErrorCodes.ETIMEDOUT.value, request))
         }
 
+        if(onDownloadProProgress) {
+            request.onprogress = onDownloadProProgress;
+        }
+
+        if(onUploadProgress) {
+            request.upload.onprogress = onUploadProgress;
+        }
+
         if(responseType) {
             request.responseType = responseType;
         }
@@ -69,12 +95,43 @@ export default isXhrAdapterSupported && function xhr(config: AxiosRequestConfig)
             request.timeout = timeout;
         }
 
+        // 跨域请求
+        if(withCredentials) {
+            request.withCredentials = withCredentials;
+        }
+
         if(cancelToken || signal) {
             cancelToken && cancelToken.subscribe(onCancel);
             if(signal) {
                 config.signal?.aborted ? onCancel() : signal?.addEventListener?.('abort', onCancel)
             }
         }
+
+        // process headers
+        if(isFromData(data)) {
+            delete headers!['Content-Type'];
+        }
+
+        if((withCredentials || isURLSameOrigin(url!)) && xsrfCookieName) {
+            // xsrf 处理
+            const xsrfVal = cookie.read(xsrfCookieName);
+            if(xsrfVal &&xsrfHeaderName) {
+                headers![xsrfHeaderName] = xsrfVal;
+            }
+        }
+
+        // 处理 auth
+        if(auth) {
+            headers!['Authorization'] = 'Basic ' + btoa(auth.username + ':' + auth.password);
+        }
+
+        Object.keys(headers!).forEach(name => {
+            if(data === null && name.toLocaleLowerCase() === 'content-type') {
+                delete headers![name];
+            } else {
+                request.setRequestHeader(name, headers![name]);
+            }
+        });
 
         request.send(data as any);
     });
